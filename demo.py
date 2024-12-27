@@ -4,9 +4,9 @@ import logging
 import numpy as np
 import svgwrite
 
-import drawing
-import lyrics
-from rnn import rnn
+from . import drawing
+from . import lyrics
+from .rnn import rnn
 
 
 class Hand(object):

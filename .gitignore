@@ -5,3 +5,8 @@ data/processed
 
 logs
 predictions
+
+# Folders that WE want to ignore (but keep the banner)
+__pycache__
+img
+!img/banner.svg
