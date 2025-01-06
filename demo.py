@@ -11,7 +11,9 @@ from .rnn import rnn
 
 class Hand(object):
 
-    def __init__(self):
+    def __init__(self, *, max_line_length=75):
+        self.max_line_length = max_line_length
+
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         self.nn = rnn(
             log_dir='logs',
@@ -40,26 +42,31 @@ class Hand(object):
 
     def write(self, filename, lines, biases=None, styles=None, stroke_colors=None, stroke_widths=None):
         valid_char_set = set(drawing.alphabet)
+        cleaned_lines = []
+
         for line_num, line in enumerate(lines):
-            if len(line) > 75:
+            if len(line) > self.max_line_length:
                 raise ValueError(
-                    (
-                        "Each line must be at most 75 characters. "
-                        "Line {} contains {}"
-                    ).format(line_num, len(line))
+                    f"Each line must be at most {self.max_line_length} characters. "
+                    f"Line {line_num} contains {len(line)}"
                 )
 
-            for char in line:
-                if char not in valid_char_set:
-                    raise ValueError(
-                        (
-                            "Invalid character {} detected in line {}. "
-                            "Valid character set is {}"
-                        ).format(char, line_num, valid_char_set)
-                    )
+            cleaned_line = ""
 
-        strokes = self._sample(lines, biases=biases, styles=styles)
-        self._draw(strokes, lines, filename, stroke_colors=stroke_colors, stroke_widths=stroke_widths)
+            for char in line:
+                if char in valid_char_set:
+                    cleaned_line += char
+                    continue
+
+                print(
+                    f"Invalid character {char} detected in line {line_num}. "
+                    "Removed; proceeding."
+                )
+
+            cleaned_lines.append(cleaned_line)
+
+        strokes = self._sample(cleaned_lines, biases=biases, styles=styles)
+        self._draw(strokes, cleaned_lines, filename, stroke_colors=stroke_colors, stroke_widths=stroke_widths)
 
     def _sample(self, lines, biases=None, styles=None):
         num_samples = len(lines)
@@ -68,7 +75,7 @@ class Hand(object):
 
         x_prime = np.zeros([num_samples, 1200, 3])
         x_prime_len = np.zeros([num_samples])
-        chars = np.zeros([num_samples, 120])
+        chars = np.zeros([num_samples, self.max_line_length + 45])
         chars_len = np.zeros([num_samples])
 
         if styles is not None:
@@ -111,8 +118,10 @@ class Hand(object):
         stroke_colors = stroke_colors or ['black']*len(lines)
         stroke_widths = stroke_widths or [2]*len(lines)
 
+        longest_line_length = max(len(line) for line in lines)
+
         line_height = 60
-        view_width = 1000
+        view_width = max(120, 1000 * longest_line_length // 75)
         view_height = line_height*(len(strokes) + 1)
 
         dwg = svgwrite.Drawing(filename=filename)
