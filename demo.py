@@ -58,9 +58,11 @@ class Hand(object):
                     cleaned_line += char
                     continue
 
+                cleaned_line += " "
+
                 print(
                     f"Invalid character {char} detected in line {line_num}. "
-                    "Removed; proceeding."
+                    "Replaced with space; proceeding."
                 )
 
             cleaned_lines.append(cleaned_line)
@@ -120,15 +122,15 @@ class Hand(object):
 
         longest_line_length = max(len(line) for line in lines)
 
-        line_height = 60
-        view_width = max(120, 1000 * longest_line_length // 75)
+        line_height = 44
+        view_width = max(120, 1000 * longest_line_length // 65)
         view_height = line_height*(len(strokes) + 1)
 
         dwg = svgwrite.Drawing(filename=filename)
         dwg.viewbox(width=view_width, height=view_height)
         dwg.add(dwg.rect(insert=(0, 0), size=(view_width, view_height), fill='white'))
 
-        initial_coord = np.array([0, -(3*line_height / 4)])
+        initial_coord = np.array([0, -(line_height / 2)])
         for offsets, line, color, width in zip(strokes, lines, stroke_colors, stroke_widths):
 
             if not line:
@@ -142,10 +144,12 @@ class Hand(object):
 
             strokes[:, 1] *= -1
             strokes[:, :2] -= strokes[:, :2].min() + initial_coord
-            strokes[:, 0] += (view_width - strokes[:, 0].max()) / 2
+
+            # Remove centering with respect to svg viewport
+            # strokes[:, 0] += (view_width - strokes[:, 0].max()) / 2
 
             prev_eos = 1.0
-            p = "M{},{} ".format(0, 0)
+            p = ""
             for x, y, eos in zip(*strokes.T):
                 p += '{}{},{} '.format('M' if prev_eos == 1.0 else 'L', x, y)
                 prev_eos = eos
